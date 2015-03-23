@@ -166,7 +166,7 @@ def download_book(widgets, state, url, page_start=0, page_end=None):
             existing_files = glob.glob(escape_glob(output_path) + ".*")
             if existing_files:
                 debug("Skip existing image: %s" % existing_files[0])
-                images.append(output_path)
+                images.append(existing_files[0])
                 continue
             relative_page = page - page_start + 1
             widgets.progress_all.set_fraction(float(relative_page-1)/len(page_ids))
@@ -181,12 +181,16 @@ def download_book(widgets, state, url, page_start=0, page_end=None):
                 page_url, opener, headers=HEADERS,
                 elapsed_cb=functools.partial(on_elapsed, widgets, "page"))
             
-            image_url0 = pysheng.get_image_url_from_page(page_html)
             width, height = info["max_resolution"]
-            image_url = re.sub("w=(\d+)", "w=" + str(width), image_url0)
-            if not image_url:
-                debug("No image for this page, probably access is restricted")
+            image_url0 = pysheng.get_image_url_from_page(page_html)
+            if not image_url0:
+                debug("Page unavailable or viewing limit reached for this book")
                 continue            
+            else:
+                image_url = re.sub("w=(\d+)", "w=" + str(width), image_url0)
+                if not image_url:
+                    debug("No image found for this page")
+                    continue            
             debug(header + "Download page image: %s" % image_url)
             widgets.progress_current.set_fraction(0.0)
             image_data = yield asyncjobs.ProgressDownloadThreadedTask(
